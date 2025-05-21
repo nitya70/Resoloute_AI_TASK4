@@ -36,5 +36,5 @@ It is a Streamlit web application that allows users to:
 
 1. Clone this repo:
 ```bash
-git clone https://github.com/yourusername/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/nita70/Resolute_AI_TASK4.git
+cd Resolute_AI_TASK4
