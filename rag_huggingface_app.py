@@ -1,24 +1,25 @@
 # rag_huggingface_app.py
 import streamlit as st
+import os
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain.llms import HuggingFaceHub
-import os
 import tempfile
 
-# 🔐 Hugging Face API Key (can be hardcoded or input)
+# ✅ THIS MUST COME FIRST before any other st.xxx
+st.set_page_config(page_title="HF RAG Chat", layout="wide")
+
+# Then continue with Streamlit inputs
 HF_API_KEY = os.getenv("HUGGINGFACEHUB_API_TOKEN")
-#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
 if not HF_API_KEY:
     st.warning("Please enter your Hugging Face API key.")
     HF_API_KEY = st.text_input("Hugging Face API Key", type="password")
     if HF_API_KEY:
         os.environ["HUGGINGFACEHUB_API_TOKEN"] = HF_API_KEY
 
-st.set_page_config(page_title="HF RAG Chat", layout="wide")
 st.title("🤗 RAG Chat using Hugging Face")
 
 uploaded_files = st.file_uploader("Upload PDFs, DOCX, or TXT", type=["pdf", "txt", "docx"], accept_multiple_files=True)
