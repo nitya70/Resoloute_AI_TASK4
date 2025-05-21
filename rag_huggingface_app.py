@@ -1,31 +1,27 @@
-# rag_huggingface_app.py
+# rag_hf_local.py
+
 import streamlit as st
 import os
+import tempfile
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
-from langchain.llms import HuggingFaceHub
-import tempfile
+from langchain.llms import HuggingFacePipeline
+from transformers import pipeline
 
-# ✅ THIS MUST COME FIRST before any other st.xxx
+# ✅ MUST BE FIRST STREAMLIT COMMAND
 st.set_page_config(page_title="HF RAG Chat", layout="wide")
+st.title("📄 RAG Chat Using Hugging Face (Local Transformers)")
 
-# Then continue with Streamlit inputs
-HF_API_KEY = os.getenv("HUGGINGFACEHUB_API_TOKEN")
-if not HF_API_KEY:
-    st.warning("Please enter your Hugging Face API key.")
-    HF_API_KEY = st.text_input("Hugging Face API Key", type="password")
-    if HF_API_KEY:
-        os.environ["HUGGINGFACEHUB_API_TOKEN"] = HF_API_KEY
+# Upload files
+uploaded_files = st.file_uploader("Upload PDFs, TXT, or DOCX files", type=["pdf", "txt", "docx"], accept_multiple_files=True)
 
-st.title("🤗 RAG Chat using Hugging Face")
-
-uploaded_files = st.file_uploader("Upload PDFs, DOCX, or TXT", type=["pdf", "txt", "docx"], accept_multiple_files=True)
+# Ask question
 query = st.text_input("Ask a question about your documents:")
 
-# Load and parse documents
+# Function: Load and parse documents
 def load_documents(uploaded_files):
     docs = []
     for file in uploaded_files:
@@ -46,26 +42,24 @@ def load_documents(uploaded_files):
         docs.extend(loader.load())
     return docs
 
-# Run RAG when user uploads and asks
+# Run pipeline when user uploads and asks
 if uploaded_files and query:
-    with st.spinner("Processing..."):
+    with st.spinner("🔍 Processing..."):
+        # 1. Load and chunk documents
         raw_docs = load_documents(uploaded_files)
-
-        # Split into chunks
         splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
         docs = splitter.split_documents(raw_docs)
 
-        # Embeddings via Hugging Face
+        # 2. Embed documents using HuggingFace sentence transformer
         embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
         vectorstore = FAISS.from_documents(docs, embeddings)
         retriever = vectorstore.as_retriever()
 
-        # Hugging Face LLM (Mistral or Falcon hosted)
-        llm = HuggingFaceHub(
-            repo_id="mistralai/Mistral-7B-Instruct-v0.1",  # or try 'tiiuae/falcon-7b-instruct'
-            model_kwargs={"temperature": 0.3, "max_new_tokens": 512}
-        )
+        # 3. Load local Hugging Face model (via transformers)
+        generator = pipeline("text-generation", model="tiiuae/falcon-7b-instruct", max_new_tokens=512)
+        llm = HuggingFacePipeline(pipeline=generator)
 
+        # 4. Run RetrievalQA chain
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
             retriever=retriever,
@@ -74,9 +68,13 @@ if uploaded_files and query:
 
         result = qa_chain({"query": query})
 
+        # 5. Show answer
         st.subheader("💬 Answer")
         st.write(result["result"])
 
-        st.subheader("📚 Sources")
-        for doc in result["source_documents"]:
-            st.markdown(f"- `{doc.metadata.get('source', 'Unknown')}`")
+        # 6. Show source document snippets
+        st.subheader("📚 Source Documents")
+        for i, doc in enumerate(result["source_documents"]):
+            st.markdown(f"**Snippet {i+1}:** `{doc.metadata.get('source', 'Uploaded File')}`")
+            st.write(doc.page_content[:300] + "...")
+
