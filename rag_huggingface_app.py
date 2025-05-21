@@ -11,6 +11,7 @@ import tempfile
 
 # 🔐 Hugging Face API Key (can be hardcoded or input)
 HF_API_KEY = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+#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
 if not HF_API_KEY:
     st.warning("Please enter your Hugging Face API key.")
     HF_API_KEY = st.text_input("Hugging Face API Key", type="password")
