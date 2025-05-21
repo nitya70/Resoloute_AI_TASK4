@@ -56,7 +56,8 @@ if uploaded_files and query:
         retriever = vectorstore.as_retriever()
 
         # 3. Load local Hugging Face model (via transformers)
-        generator = pipeline("text-generation", model="tiiuae/falcon-7b-instruct", max_new_tokens=512)
+        generator = pipeline("text2text-generation", model="google/flan-t5-small", max_new_tokens=256)
+
         llm = HuggingFacePipeline(pipeline=generator)
 
         # 4. Run RetrievalQA chain
